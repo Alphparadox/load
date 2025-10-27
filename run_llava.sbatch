@@ -43,6 +43,6 @@ echo "Running Python script..."
 # --- !! YOU MUST CHANGE THIS NAME !! ---
 # Make sure 'your_script_name.py' is the name of your Python file
 # (e.g., test_model.py, or whatever you called the "capital of India" script)
-python sample.py
+python sample.py --benchmark_file ~/fyp/harsh/benchmark_data.json
 
 echo "Job finished."
