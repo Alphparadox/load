@@ -156,20 +156,29 @@ def main():
         print("Please run 'generate_benchmark.py' first and check the path.")
         return
 
-    # --- Part 2: Load Model ---
-    print("\n--- PART 2: LOADING LLaVA MODEL ---")
-    print(f"Loading base LLaVA model from {BASE_MODEL_PATH}...")
-    try:
-        processor = AutoProcessor.from_pretrained(BASE_MODEL_PATH)
-        model = LlavaForConditionalGeneration.from_pretrained(
-            BASE_MODEL_PATH, 
-            torch_dtype=torch.float16 if DEVICE=="cuda" else torch.float32
-        ).to(DEVICE)
-        print(f"Model loaded to {DEVICE} ✅")
-    except Exception as e:
-        print(f"CRITICAL ERROR: Could not load model from {BASE_MODEL_PATH}.")
-        print(f"Error: {e}")
-        return
+  # --- PART 2: LOAD MODEL (updated for deprecation) ---
+print("\n--- PART 2: LOADING LLaVA MODEL ---")
+print(f"Loading base LLaVA model from {BASE_MODEL_PATH}...")
+try:
+    processor = AutoProcessor.from_pretrained(BASE_MODEL_PATH)
+
+    # Use `dtype` instead of deprecated `torch_dtype`
+    dtype = torch.float16 if DEVICE == "cuda" else torch.float32
+
+    model = LlavaForConditionalGeneration.from_pretrained(
+        BASE_MODEL_PATH,
+        dtype=dtype
+    )
+
+    # move model to device after loading
+    model = model.to(DEVICE)
+
+    print(f"Model loaded to {DEVICE} ✅")
+except Exception as e:
+    print(f"CRITICAL ERROR: Could not load model from {BASE_MODEL_PATH}.")
+    print(f"Error: {e}")
+    return
+
 
     # --- Part 3: Run Benchmark ---
     # Pass the data we loaded from the JSON file
