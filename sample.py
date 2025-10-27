@@ -9,23 +9,11 @@ import argparse
 # LLaVA BENCHMARK RUNNER SCRIPT
 # =============================================================================
 
-# 1. Path to your local model
 BASE_MODEL_PATH = "/home/naveenkumar/load/llava-model-local"
-
-# 2. Path to folder containing images
-BASE_IMAGE_DIR = "/home/naveenkumar/fyp"
-
-# 3. Device setup
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def get_full_image_path(relative_path):
-    """Construct the absolute path for an image using the base directory."""
-    return os.path.join(BASE_IMAGE_DIR, relative_path)
-
-
 def load_benchmark_image(image_path):
-    """Load and convert image to RGB for benchmark."""
     if not os.path.exists(image_path):
         print(f"Error: Image file not found at {image_path}")
         return None
@@ -49,15 +37,9 @@ def run_kiva_benchmark(benchmark_data, model, processor):
     for idx, item in enumerate(benchmark_data, 1):
         print(f"\n--- Test Item {idx}/{total} ---")
 
-        # Convert relative JSON paths to absolute
-        input_path = get_full_image_path(item["input_image"])
-        option_a_path = get_full_image_path(item["option_image_a"])
-        option_b_path = get_full_image_path(item["option_image_b"])
-
-        # Load images
-        img_input = load_benchmark_image(input_path)
-        img_option_a = load_benchmark_image(option_a_path)
-        img_option_b = load_benchmark_image(option_b_path)
+        img_input = load_benchmark_image(item["input_image"])
+        img_option_a = load_benchmark_image(item["option_image_a"])
+        img_option_b = load_benchmark_image(item["option_image_b"])
 
         if not img_input or not img_option_a or not img_option_b:
             print(f"Skipping item {idx} due to missing images.")
@@ -130,6 +112,7 @@ def main():
     except Exception as e:
         print(f"CRITICAL ERROR: Could not load benchmark file from {args.benchmark_file}.")
         print(f"Error: {e}")
+        print("Please run 'generate_benchmark.py' first and check the path.")
         return
 
     print("\n--- PART 2: LOADING LLaVA MODEL ---")
@@ -151,6 +134,7 @@ def main():
         print(f"Error: {e}")
         return
 
+    # --- PART 3: Run Benchmark ---
     run_kiva_benchmark(benchmark_data_list, model, processor)
 
 
