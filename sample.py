@@ -30,19 +30,26 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # BENCHMARK FUNCTIONS
 # =============================================================================
 
-def load_benchmark_image(image_path):
-    """Load a PIL Image from a file path for the benchmark."""
-    if not os.path.exists(image_path):
-        print(f"Error: Image file not found at {image_path}")
+def load_benchmark_image(image_path, base_dir):
+    """
+    Load a PIL Image from a file path for the benchmark.
+    Combines the base_dir with the relative image_path.
+    """
+    # Create the full, absolute path
+    # os.path.expanduser handles the '~' (home directory) symbol
+    full_path = os.path.expanduser(os.path.join(base_dir, image_path))
+
+    if not os.path.exists(full_path):
+        print(f"Error: Image file not found at {full_path}")
         return None
     try:
         # Open and convert to RGB (LLaVA processor expects RGB)
-        return Image.open(image_path).convert("RGB")
+        return Image.open(full_path).convert("RGB")
     except Exception as e:
-        print(f"Error reading image {image_path}: {e}")
+        print(f"Error reading image {full_path}: {e}")
         return None
 
-def run_kiva_benchmark(benchmark_data, model, processor):
+def run_kiva_benchmark(benchmark_data, model, processor, image_base_dir):
     """
     Runs the full benchmark loop on the provided data.
     """
@@ -58,13 +65,14 @@ def run_kiva_benchmark(benchmark_data, model, processor):
     for idx, item in enumerate(benchmark_data, 1):
         print(f"\n--- Test Item {idx}/{total} ---")
 
-        # Load all three images as PIL objects
-        img_input = load_benchmark_image(item["input_image"])
-        img_option_a = load_benchmark_image(item["option_image_a"])
-        img_option_b = load_benchmark_image(item["option_image_b"])
+        # Load all three images as PIL objects, passing the base directory
+        img_input = load_benchmark_image(item["input_image"], image_base_dir)
+        img_option_a = load_benchmark_image(item["option_image_a"], image_base_dir)
+        img_option_b = load_benchmark_image(item["option_image_b"], image_base_dir)
 
         if not img_input or not img_option_a or not img_option_b:
             print(f"Skipping item {idx} due to one or more missing images.")
+            # Print the original relative paths for clarity
             print(f"  Missing Input: {item['input_image']}")
             print(f"  Missing Option A: {item['option_image_a']}")
             print(f"  Missing Option B: {item['option_image_b']}")
@@ -142,6 +150,9 @@ def main():
     # This argument is required to tell the script where to find the JSON file
     parser.add_argument('--benchmark_file', type=str, required=True,
                         help='Path to the benchmark_data.json file (created by generate_benchmark.py).')
+    # This new argument tells the script where the image folders are located
+    parser.add_argument('--image_base_dir', type=str, required=True,
+                        help='The absolute base path to the directory containing the images (e.g., ~/fyp).')
     args = parser.parse_args()
 
     # --- Part 1: Load Benchmark Data ---
@@ -172,8 +183,8 @@ def main():
         return
 
     # --- Part 3: Run Benchmark ---
-    # Pass the data we loaded from the JSON file
-    run_kiva_benchmark(benchmark_data_list, model, processor)
+    # Pass the data we loaded and the new image_base_dir
+    run_kiva_benchmark(benchmark_data_list, model, processor, args.image_base_dir)
 
 if __name__ == "__main__":
     main()
