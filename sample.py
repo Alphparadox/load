@@ -157,12 +157,20 @@ def main():
 
     # --- Part 1: Load Benchmark Data ---
     print("--- PART 1: LOADING BENCHMARK DATA ---")
+    
+    # --- THIS IS THE FIX ---
+    # Expand the user path (handles '~') for the benchmark file
+    benchmark_file_path = os.path.expanduser(args.benchmark_file)
+    # -----------------------
+
     try:
-        with open(args.benchmark_file, 'r') as f:
+        # Use the expanded path
+        with open(benchmark_file_path, 'r') as f:
             benchmark_data_list = json.load(f)
-        print(f"Loaded {len(benchmark_data_list)} items from {args.benchmark_file}")
+        print(f"Loaded {len(benchmark_data_list)} items from {benchmark_file_path}")
     except Exception as e:
-        print(f"CRITICAL ERROR: Could not load benchmark file from {args.benchmark_file}.")
+        # Print the path that was tried
+        print(f"CRITICAL ERROR: Could not load benchmark file from {benchmark_file_path}.")
         print(f"Error: {e}")
         print("Please run 'generate_benchmark.py' first and check the path.")
         return
