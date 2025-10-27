@@ -15,7 +15,10 @@
 #SBATCH --ntasks-per-node=1       # Request one task (process)
 #SBATCH --cpus-per-task=4         # Request 4 CPUs per task (for data handling)
 #SBATCH --mem=32G                 # Request 32GB of RAM (for the large model)
-#SBATCH --gres=gpu:1              # --- CRITICAL: Request 1 GPU ---
+#
+# --- THIS LINE IS NOW FIXED ---
+#SBATCH --gres=gpu:shard:1        # Request 1 GPU using the 'shard' format
+#
 #SBATCH --time=00:15:00           # Request 15 minutes (should be enough)
 
 # -----------------
@@ -45,6 +48,6 @@ echo "Running Python script..."
 
 # --- !! YOU MUST CHANGE THIS NAME !! ---
 # Make sure 'your_script_name.py' is the name of your Python file
-python sample.py
+python your_script_name.py
 
 echo "Job finished."
