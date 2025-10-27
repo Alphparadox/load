@@ -11,11 +11,14 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # -------------------------------
 # 1️⃣ Load Base Model
 # -------------------------------
+# -------------------------------
+# 1️⃣ Load Base Model
+# -------------------------------
 print(f"Loading base LLaVA model from {BASE_MODEL_PATH}...")
 processor = AutoProcessor.from_pretrained(BASE_MODEL_PATH)
 model = LlavaForConditionalGeneration.from_pretrained(
     BASE_MODEL_PATH, 
-    torch_dtype=torch.float16 if DEVICE=="cuda" else torch.float32
+    dtype=torch.float16 if DEVICE=="cuda" else torch.float32  # <-- THIS IS THE FIX
 ).to(DEVICE)
 print("Model loaded ✅")
 
