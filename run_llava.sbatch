@@ -13,7 +13,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G             # ✅ enough CPU RAM for 7B model
 #SBATCH --time=02:00:00       # ✅ allow enough wall time
-#SBATCH --exclude=node1       # optional, as in your setup
+#SBATCH --exclude=node2       # optional, as in your setup
 
 echo "=============================="
 echo "Starting job $SLURM_JOB_ID on $(hostname)"
