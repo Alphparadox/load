@@ -6,40 +6,34 @@
 # Job name
 #SBATCH --job-name=llava_text_test
 #
-# Output and error log files
-#SBATCH --output=llava_test_%j.out
-#SBATCH --error=llava_test_%j.err
+# --- FIXED: Using your working log paths ---
+#SBATCH --output=../logs/llava_test_%j.out
+#SBATCH --error=../logs/llava_test_%j.err
 #
-# Resource requests
-#SBATCH --nodes=1                 # Request one node
-#SBATCH --ntasks-per-node=1       # Request one task (process)
-#SBATCH --cpus-per-task=4         # Request 4 CPUs per task (for data handling)
-#SBATCH --mem=32G                 # Request 32GB of RAM (for the large model)
+# Resource requests (from your working file)
+#SBATCH --ntasks=1                 # Use ntasks=1 (simpler than nodes/ntasks-per-node)
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
 #
-# --- THIS LINE IS NOW FIXED ---
-#SBATCH --gres=gpu:shard:1        # Request 1 GPU using the 'shard' format
+# --- CRITICAL: Added from your working file ---
+#SBATCH --partition=gpu
+#SBATCH --gres=shard:1
+#SBATCH --exclude=node1
 #
-#SBATCH --time=00:15:00           # Request 15 minutes (should be enough)
+#SBATCH --time=00:15:00            # 15 minutes is fine for this test
 
 # -----------------
 # JOB ENVIRONMENT
 # -----------------
 echo "Starting job $SLURM_JOB_ID on $(hostname)"
-echo "Loading environment..."
 
-# --- IMPORTANT: ADJUST THESE LINES FOR YOUR CLUSTER ---
-
-# 1. Load modules (if your cluster uses them)
-# These names are examples; check your cluster's documentation
-module purge
-module load python/3.10
-module load cuda/11.8
-
-# 2. Activate your Python virtual environment
-# --- !! YOU MUST CHANGE THIS PATH !! ---
-source /path/to/your/virtualenv/bin/activate
+# --- FIXED: Using your working conda environment ---
+echo "Activating conda environment..."
+source ~/miniconda3/bin/activate kiva_env
 
 echo "Environment loaded."
+echo "Running on: $HOSTNAME"
+nvidia-smi
 
 # -----------------
 # RUN THE SCRIPT
@@ -48,6 +42,7 @@ echo "Running Python script..."
 
 # --- !! YOU MUST CHANGE THIS NAME !! ---
 # Make sure 'your_script_name.py' is the name of your Python file
-python your_script_name.py
+# (e.g., test_model.py, or whatever you called the "capital of India" script)
+python sample.py
 
 echo "Job finished."
