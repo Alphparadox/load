@@ -9,7 +9,7 @@
 #SBATCH --error=../logs/llava_test_%j.err
 
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:1          # ✅ request one GPU
+#SBATCH --gres=gpu:shard:1          # ✅ request one GPU
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G             # ✅ enough CPU RAM for 7B model
 #SBATCH --time=02:00:00       # ✅ allow enough wall time
