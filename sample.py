@@ -5,7 +5,7 @@ from transformers import AutoProcessor, LlavaForConditionalGeneration
 # CONFIGURATION
 # -------------------------------
 # Use the same model ID you used before
-BASE_MODEL_PATH = "llava-hf/llava-1.5-7b-hf"
+BASE_MODEL_PATH = "/home/naveenkumar/load/llava-model-local"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # -------------------------------
