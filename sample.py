@@ -12,6 +12,12 @@ import argparse
 BASE_MODEL_PATH = "/home/naveenkumar/load/llava-model-local"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+BASE_IMAGE_DIR = "/home/naveenkumar/fyp"
+
+def get_full_image_path(relative_path):
+    """Construct the absolute path for an image using the base directory."""
+    return os.path.join(BASE_IMAGE_DIR, relative_path)
+
 
 def load_benchmark_image(image_path):
     if not os.path.exists(image_path):
@@ -37,9 +43,14 @@ def run_kiva_benchmark(benchmark_data, model, processor):
     for idx, item in enumerate(benchmark_data, 1):
         print(f"\n--- Test Item {idx}/{total} ---")
 
-        img_input = load_benchmark_image(item["input_image"])
-        img_option_a = load_benchmark_image(item["option_image_a"])
-        img_option_b = load_benchmark_image(item["option_image_b"])
+        input_path = get_full_image_path(item["input_image"])
+        option_a_path = get_full_image_path(item["option_image_a"])
+        option_b_path = get_full_image_path(item["option_image_b"])
+
+        # Load images
+        img_input = load_benchmark_image(input_path)
+        img_option_a = load_benchmark_image(option_a_path)
+        img_option_b = load_benchmark_image(option_b_path)
 
         if not img_input or not img_option_a or not img_option_b:
             print(f"Skipping item {idx} due to missing images.")
