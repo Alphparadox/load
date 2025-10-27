@@ -1,49 +1,51 @@
 #!/bin/bash
+# ===========================================================
+# LLaVA Job Runner (Stable SLURM Configuration)
+# Author: Anil Prajapati
+# ===========================================================
 
-# -----------------
-# SBATCH DIRECTIVES
-# -----------------
-# Job name
-#SBATCH --job-name=llava_text_test
-#
-# --- FIXED: Using your working log paths ---
+#SBATCH --job-name=llava_test
 #SBATCH --output=../logs/llava_test_%j.out
 #SBATCH --error=../logs/llava_test_%j.err
-#
-# Resource requests (from your working file)
-#SBATCH --ntasks=1                 # Use ntasks=1 (simpler than nodes/ntasks-per-node)
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
-#
-# --- CRITICAL: Added from your working file ---
+
 #SBATCH --partition=gpu
-#SBATCH --gres=shard:1
-#SBATCH --exclude=node1
-#
-#SBATCH --time=01:00:00            # 15 minutes is fine for this test
+#SBATCH --gres=gpu:1          # ✅ request one GPU
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=64G             # ✅ enough CPU RAM for 7B model
+#SBATCH --time=02:00:00       # ✅ allow enough wall time
+#SBATCH --exclude=node1       # optional, as in your setup
 
-# -----------------
-# JOB ENVIRONMENT
-# -----------------
+echo "=============================="
 echo "Starting job $SLURM_JOB_ID on $(hostname)"
+date
+echo "=============================="
 
-# --- FIXED: Using your working conda environment ---
+# -----------------------------
+# 1️⃣ Activate Conda environment
+# -----------------------------
 echo "Activating conda environment..."
-source ~/miniconda3/bin/activate kiva_env
-
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate kiva_env
 echo "Environment loaded."
-echo "Running on: $HOSTNAME"
+
+# -----------------------------
+# 2️⃣ Clean up any old GPU jobs
+# -----------------------------
+echo "Checking for old GPU jobs..."
 nvidia-smi
+OLD_PIDS=$(nvidia-smi | grep python | awk '{print $5}')
+if [ ! -z "$OLD_PIDS" ]; then
+  echo "Killing old Python processes: $OLD_PIDS"
+  kill -9 $OLD_PIDS
+fi
 
-# -----------------
-# RUN THE SCRIPT
-# -----------------
-echo "Running Python script..."
+# -----------------------------
+# 3️⃣ Run your Python benchmark
+# -----------------------------
+echo "Running LLaVA benchmark..."
+python /home/naveenkumar/load/sample.py \
+  --benchmark_file /home/naveenkumar/fyp/harsh/benchmark_data.json
 
-# --- !! YOU MUST CHANGE THIS NAME !! ---
-# Make sure 'your_script_name.py' is the name of your Python file
-# (e.g., test_model.py, or whatever you called the "capital of India" script)
-
-python sample.py --benchmark_file ~/fyp/harsh/benchmark_data.json
-
-echo "Job finished."
+echo "=============================="
+echo "Job finished at $(date)"
+echo "=============================="
