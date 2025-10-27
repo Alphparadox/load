@@ -182,7 +182,10 @@ def main():
         processor = AutoProcessor.from_pretrained(BASE_MODEL_PATH)
         model = LlavaForConditionalGeneration.from_pretrained(
             BASE_MODEL_PATH, 
-            torch_dtype=torch.float16 if DEVICE=="cuda" else torch.float32
+            # --- THIS IS THE FIX for the warning ---
+            # Changed 'torch_dtype' to 'dtype'
+            dtype=torch.float16 if DEVICE=="cuda" else torch.float32
+            # -------------------------------------
         ).to(DEVICE)
         print(f"Model loaded to {DEVICE} ✅")
     except Exception as e:
