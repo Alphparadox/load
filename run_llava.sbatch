@@ -20,7 +20,7 @@
 #SBATCH --gres=shard:1
 #SBATCH --exclude=node1
 #
-#SBATCH --time=00:15:00            # 15 minutes is fine for this test
+#SBATCH --time=01:00:00            # 15 minutes is fine for this test
 
 # -----------------
 # JOB ENVIRONMENT
