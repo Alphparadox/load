@@ -1,59 +1,180 @@
 import torch
 from transformers import AutoProcessor, LlavaForConditionalGeneration
+from PIL import Image
+import os
+import json
+import argparse
+
+# =============================================================================
+#
+# LLaVA BENCHMARK RUNNER SCRIPT
+#
+# This script:
+# 1. Loads a 'benchmark_data.json' file (created by generate_benchmark.py).
+# 2. Loads the local LLaVA model.
+# 3. Runs the benchmark on the data from the JSON file.
+# 4. Prints the final accuracy.
+#
+# =============================================================================
 
 # -------------------------------
 # CONFIGURATION
 # -------------------------------
-# Use the same model ID you used before
-BASE_MODEL_PATH = "/home/naveenkumar/load/llava-model-local"
+# 1. Point this to your local LLaVA model
+BASE_MODEL_PATH = "/home/naveenkumar/load/llava-model-local" 
+
+# 2. Set device
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# -------------------------------
-# 1️⃣ Load Base Model
-# -------------------------------
-# -------------------------------
-# 1️⃣ Load Base Model
-# -------------------------------
-print(f"Loading base LLaVA model from {BASE_MODEL_PATH}...")
-processor = AutoProcessor.from_pretrained(BASE_MODEL_PATH)
-model = LlavaForConditionalGeneration.from_pretrained(
-    BASE_MODEL_PATH, 
-    dtype=torch.float16 if DEVICE=="cuda" else torch.float32  # <-- THIS IS THE FIX
-).to(DEVICE)
-print("Model loaded ✅")
+# =============================================================================
+# BENCHMARK FUNCTIONS
+# =============================================================================
 
-# -------------------------------
-# 2️⃣ Ask a Question (Text-Only)
-# -------------------------------
-print("\nAsking a simple question...")
+def load_benchmark_image(image_path):
+    """Load a PIL Image from a file path for the benchmark."""
+    if not os.path.exists(image_path):
+        print(f"Error: Image file not found at {image_path}")
+        return None
+    try:
+        # Open and convert to RGB (LLaVA processor expects RGB)
+        return Image.open(image_path).convert("RGB")
+    except Exception as e:
+        print(f"Error reading image {image_path}: {e}")
+        return None
 
-question = "What is the capital of India?"
+def run_kiva_benchmark(benchmark_data, model, processor):
+    """
+    Runs the full benchmark loop on the provided data.
+    """
+    print(f"\n--- Running KiVA Benchmark on HF model: {BASE_MODEL_PATH} ---")
 
-# Format the prompt for a text-only chat
-# We remove the <image> token
-prompt = f"USER: {question} ASSISTANT:"
+    correct = 0
+    total = len(benchmark_data)
 
-# Process *only* the text
-inputs = processor(
-    text=prompt, 
-    images=None,  # Explicitly pass no images
-    return_tensors="pt"
-).to(DEVICE)
+    if total == 0:
+        print("Benchmark dataset is empty. No data found in JSON file.")
+        return
 
-# -------------------------------
-# 3️⃣ Get the Answer
-# -------------------------------
-# Generate the response
-# The model will run in text-only mode since pixel_values is None
-output = model.generate(**inputs, max_new_tokens=50)
+    for idx, item in enumerate(benchmark_data, 1):
+        print(f"\n--- Test Item {idx}/{total} ---")
 
-# Decode the output
-full_output = processor.batch_decode(output, skip_special_tokens=True)[0]
-print(f"\nFull model output: {full_output}")
+        # Load all three images as PIL objects
+        img_input = load_benchmark_image(item["input_image"])
+        img_option_a = load_benchmark_image(item["option_image_a"])
+        img_option_b = load_benchmark_image(item["option_image_b"])
 
-# Extract just the answer part
-try:
-    predicted_answer = full_output.split("ASSISTANT:")[1].strip()
-    print(f"\nPredicted Answer: {predicted_answer}")
-except IndexError:
-    print("Error: Could not parse the model's answer.")
+        if not img_input or not img_option_a or not img_option_b:
+            print(f"Skipping item {idx} due to one or more missing images.")
+            print(f"  Missing Input: {item['input_image']}")
+            print(f"  Missing Option A: {item['option_image_a']}")
+            print(f"  Missing Option B: {item['option_image_b']}")
+            continue
+
+        try:
+            # Build the prompt
+            prompt_content = f"""USER: <image>\n<image>\n<image>\nThe first image is the input. The second image is Option A. The third image is Option B.
+
+Question: {item['question']}
+
+Based on the input image, which option (A or B) is the correct answer?
+Please respond with only the letter 'A' or 'B'.
+ASSISTANT:"""
+
+            # Process images and text
+            inputs = processor(
+                text=prompt_content,
+                images=[img_input, img_option_a, img_option_b],
+                return_tensors="pt"
+            ).to(DEVICE)
+
+            # Generate response
+            with torch.inference_mode():
+                output_ids = model.generate(**inputs, max_new_tokens=10)
+
+            # Decode the output
+            model_answer_raw = processor.batch_decode(
+                output_ids, 
+                skip_special_tokens=True
+            )[0].strip()
+            
+            # Clean the output
+            if "ASSISTANT:" in model_answer_raw:
+                 model_answer_raw = model_answer_raw.split("ASSISTANT:")[-1].strip()
+
+            ground_truth = item["ground_truth_answer"].upper()
+
+            print(f"Question: {item['question']}")
+            print(f"Ground Truth: {ground_truth}")
+            print(f"Model Answer (Raw): {model_answer_raw}")
+
+            # Evaluation logic
+            model_choice = ""
+            for char in model_answer_raw.upper():
+                if char in ('A', 'B'):
+                    model_choice = char
+                    break  # Found the first choice
+
+            if model_choice == ground_truth:
+                print(f"Result: CORRECT ✅ (Model chose {model_choice})")
+                correct += 1
+            else:
+                print(f"Result: INCORRECT ❌ (Expected: {ground_truth}, Got: {model_choice or 'None'})")
+
+        except Exception as e:
+            print(f"Error processing item {idx}: {e}")
+
+    # Final results
+    if total > 0:
+        accuracy = (correct / total) * 100
+        print("\n--- Benchmark Complete ---")
+        print(f"Total Items: {total}")
+        print(f"Correct Predictions: {correct}")
+        print(f"Accuracy: {accuracy:.2f}%")
+    else:
+        print("\nNo valid items processed.")
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(description="Run LLaVA benchmark from a JSON file.")
+    # This argument is required to tell the script where to find the JSON file
+    parser.add_argument('--benchmark_file', type=str, required=True,
+                        help='Path to the benchmark_data.json file (created by generate_benchmark.py).')
+    args = parser.parse_args()
+
+    # --- Part 1: Load Benchmark Data ---
+    print("--- PART 1: LOADING BENCHMARK DATA ---")
+    try:
+        with open(args.benchmark_file, 'r') as f:
+            benchmark_data_list = json.load(f)
+        print(f"Loaded {len(benchmark_data_list)} items from {args.benchmark_file}")
+    except Exception as e:
+        print(f"CRITICAL ERROR: Could not load benchmark file from {args.benchmark_file}.")
+        print(f"Error: {e}")
+        print("Please run 'generate_benchmark.py' first and check the path.")
+        return
+
+    # --- Part 2: Load Model ---
+    print("\n--- PART 2: LOADING LLaVA MODEL ---")
+    print(f"Loading base LLaVA model from {BASE_MODEL_PATH}...")
+    try:
+        processor = AutoProcessor.from_pretrained(BASE_MODEL_PATH)
+        model = LlavaForConditionalGeneration.from_pretrained(
+            BASE_MODEL_PATH, 
+            torch_dtype=torch.float16 if DEVICE=="cuda" else torch.float32
+        ).to(DEVICE)
+        print(f"Model loaded to {DEVICE} ✅")
+    except Exception as e:
+        print(f"CRITICAL ERROR: Could not load model from {BASE_MODEL_PATH}.")
+        print(f"Error: {e}")
+        return
+
+    # --- Part 3: Run Benchmark ---
+    # Pass the data we loaded from the JSON file
+    run_kiva_benchmark(benchmark_data_list, model, processor)
+
+if __name__ == "__main__":
+    main()
+
