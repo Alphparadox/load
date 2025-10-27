@@ -1,6 +1,6 @@
 #!/bin/bash
 # ===========================================================
-# LLaVA Job Runner (Stable SLURM Configuration)
+# LLaVA Job Runner (H100 Shard Cluster)
 # Author: Anil Prajapati
 # ===========================================================
 
@@ -9,16 +9,17 @@
 #SBATCH --error=../logs/llava_test_%j.err
 
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:shard:1          # ✅ request one GPU
+#SBATCH --gres=shard:H100:1     # ✅ correct for your cluster
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=64G             # ✅ enough CPU RAM for 7B model
-#SBATCH --time=02:00:00       # ✅ allow enough wall time
-#SBATCH --exclude=node2       # optional, as in your setup
+#SBATCH --mem=64G
+#SBATCH --time=02:00:00
+# (Removed exclusion — both node1 and node2 are valid)
 
 echo "=============================="
 echo "Starting job $SLURM_JOB_ID on $(hostname)"
 date
 echo "=============================="
+
 
 # -----------------------------
 # 1️⃣ Activate Conda environment
